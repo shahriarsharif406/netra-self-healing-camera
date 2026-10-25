@@ -1,0 +1,142 @@
+{
+  "per_process": {
+    "focus_loss": {
+      "day20": {
+        "n": 6,
+        "alerted": 0,
+        "mae_days": null,
+        "median_abs_err_days": null,
+        "wrong_fault_alerts": 0
+      },
+      "day30": {
+        "n": 6,
+        "alerted": 6,
+        "mae_days": 2.3,
+        "median_abs_err_days": 2.2,
+        "wrong_fault_alerts": 0
+      },
+      "actual_flag_days": [
+        43,
+        41,
+        44,
+        42,
+        44,
+        43
+      ]
+    },
+    "creeping_drift": {
+      "day20": {
+        "n": 6,
+        "alerted": 6,
+        "mae_days": 1.8,
+        "median_abs_err_days": 1.8,
+        "wrong_fault_alerts": 0
+      },
+      "day30": {
+        "n": 6,
+        "alerted": 6,
+        "mae_days": 1.1,
+        "median_abs_err_days": 0.9,
+        "wrong_fault_alerts": 0
+      },
+      "actual_flag_days": [
+        40,
+        40,
+        42,
+        41,
+        42,
+        41
+      ]
+    },
+    "dimming": {
+      "day20": {
+        "n": 6,
+        "alerted": 3,
+        "mae_days": 9.1,
+        "median_abs_err_days": 8.2,
+        "wrong_fault_alerts": 0
+      },
+      "day30": {
+        "n": 6,
+        "alerted": 6,
+        "mae_days": 4.9,
+        "median_abs_err_days": 5.3,
+        "wrong_fault_alerts": 0
+      },
+      "actual_flag_days": [
+        45,
+        50,
+        45,
+        52,
+        52,
+        46
+      ]
+    },
+    "rising_noise": {
+      "day20": {
+        "n": 6,
+        "alerted": 4,
+        "mae_days": 2.2,
+        "median_abs_err_days": 1.6,
+        "wrong_fault_alerts": 0
+      },
+      "day30": {
+        "n": 6,
+        "alerted": 6,
+        "mae_days": 1.1,
+        "median_abs_err_days": 1.1,
+        "wrong_fault_alerts": 0
+      },
+      "actual_flag_days": [
+        50,
+        54,
+        39,
+        46,
+        42,
+        38
+      ]
+    },
+    "dirt_buildup": {
+      "day20": {
+        "n": 6,
+        "alerted": 5,
+        "mae_days": 16.1,
+        "median_abs_err_days": 22.9,
+        "wrong_fault_alerts": 0
+      },
+      "day30": {
+        "n": 1,
+        "alerted": 0,
+        "mae_days": null,
+        "median_abs_err_days": null,
+        "wrong_fault_alerts": 0
+      },
+      "actual_flag_days": [
+        23,
+        39,
+        22,
+        25,
+        24,
+        24
+      ]
+    }
+  },
+  "stable_cameras": {
+    "timelines": 6,
+    "checks": 24,
+    "false_alerts": 0
+  },
+  "overall_mae_days": 4.4,
+  "meta": {
+    "scenes": [
+      "collage0",
+      "collage1",
+      "collage2",
+      "collage3",
+      "collage4",
+      "collage5"
+    ],
+    "days": 100,
+    "wall_seconds": 359.5
+  }
+}

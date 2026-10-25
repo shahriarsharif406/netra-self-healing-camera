@@ -1,0 +1,5 @@
+opencv-python-headless>=5.0.0
+numpy>=2.0
+scikit-image>=0.24   # only for the bundled test photos used by the simulator/evaluator
+streamlit>=1.50
+matplotlib>=3.8      # only for report figures

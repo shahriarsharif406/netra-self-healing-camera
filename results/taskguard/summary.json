@@ -1,0 +1,55 @@
+{
+  "n": 144,
+  "task_bad": 0.648,
+  "task_plain": 0.72,
+  "task_guard": 0.787,
+  "ssim_plain": 0.87,
+  "ssim_guard": 0.829,
+  "frames_guard_fired": 20,
+  "task_worse_than_bad_plain": 17,
+  "task_worse_than_bad_guard": 0,
+  "by_fault": {
+    "blur": {
+      "task_bad": 0.0,
+      "task_plain": 0.139,
+      "task_guard": 0.139,
+      "ssim_plain": 0.683,
+      "ssim_guard": 0.683
+    },
+    "low_light": {
+      "task_bad": 0.972,
+      "task_plain": 0.889,
+      "task_guard": 0.972,
+      "ssim_plain": 0.933,
+      "ssim_guard": 0.83
+    },
+    "overexposure": {
+      "task_bad": 0.917,
+      "task_plain": 0.986,
+      "task_guard": 0.986,
+      "ssim_plain": 0.796,
+      "ssim_guard": 0.796
+    },
+    "noise": {
+      "task_bad": 0.667,
+      "task_plain": 0.917,
+      "task_guard": 0.958,
+      "ssim_plain": 0.869,
+      "ssim_guard": 0.832
+    },
+    "drift": {
+      "task_bad": 0.472,
+      "task_plain": 0.486,
+      "task_guard": 0.764,
+      "ssim_plain": 0.965,
+      "ssim_guard": 0.857
+    },
+    "lens_dirt": {
+      "task_bad": 0.861,
+      "task_plain": 0.903,
+      "task_guard": 0.903,
+      "ssim_plain": 0.974,
+      "ssim_guard": 0.973
+    }
+  }
+}
