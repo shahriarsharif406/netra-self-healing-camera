@@ -14,6 +14,8 @@ frame + reference --> DIAGNOSE --> PLAN --> APPROVAL GATE --> FIX --> VERIFY --+
                                        every step is written to a JSONL audit log
 ```
 
+![NETRA UI](docs/screenshots/ui_repair.png)
+
 ## Results (measured, reproducible)
 
 Final numbers are on **192 faulty + 16 clean frames from 8 fresh scenes** that were never used for tuning
