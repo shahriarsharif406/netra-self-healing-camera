@@ -105,6 +105,16 @@ The guard trades some image fidelity for the task. It needs a task score at run 
 payloads are known; a real deployer must have an equivalent signal). Reproduce: `python -m netra.eval_taskguard`,
 `python -m netra.eval_forecast`.
 
+## Provenance and a real-camera mode
+
+* **Tamper-evident audit log.** Each event stores the SHA-256 of the previous one, so editing, deleting or
+  reordering any past entry breaks the chain (`python -m netra.provenance audit.jsonl receipt.json repaired.png`).
+  A **repair receipt** binds the original frame, the repaired frame and the chain head together, so a repaired
+  image cannot be passed off as the original. It is integrity evidence, not a digital signature: someone able to
+  rewrite the whole log and receipt could forge both; sign or anchor the head hash for stronger proof.
+* **Live webcam mode** in the UI: shoot a healthy reference with your own camera, degrade it for real (smudge,
+  dim the room, move it) and shoot again. This is a manual demo, **not a validated evaluation** on real cameras.
+
 ## How it works
 
 | fault | detector (OpenCV 5) | repair tools, in the order tried | risk |
@@ -151,7 +161,7 @@ frame has +-8% brightness and 2-3 objects that were not in the reference.
 
 ```bash
 pip install -r requirements.txt pandas pytest
-python -m pytest -q                                   # 24 tests
+python -m pytest -q                                   # 26 tests
 streamlit run app.py                                  # UI: inject faults or upload frames, approve risky fixes
 python -m netra.cli --ref ref.png --frame cam.png --out fixed.png [--yes-risky]
 python -m netra.evaluate --out results/final_fresh    # about 3 min on 2 cores, deterministic seeds

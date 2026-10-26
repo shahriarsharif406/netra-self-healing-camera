@@ -185,3 +185,32 @@ def test_agent_records_into_passport(pair):
     pp = Passport("cam-x")
     Agent(ref, passport=pp).run(live, t_days=3.0)
     assert len(pp.records) == 1 and pp.records[0]["t"] == 3.0
+
+
+# ---------------- Provenance ---------------------------------------------------------------
+from netra import provenance
+
+
+def test_audit_chain_detects_tampering(pair):
+    ref, live, _, rng = pair
+    bad, _ = faults.apply_faults(live, ["noise"], rng, sev=0.8)
+    ag = Agent(ref)
+    res = ag.run(bad)
+    ev = [dict(e) for e in ag.log.events]
+    assert provenance.verify_chain(ev) == (True, None)
+    assert provenance.verify_receipt(res.receipt, ev, res.output) == []
+    ev[1]["tool"] = "forged"                        # edit one past entry
+    ok, idx = provenance.verify_chain(ev)
+    assert not ok and idx == 1
+    del ev[2]                                       # deletion is caught too
+    assert not provenance.verify_chain(ev)[0]
+
+
+def test_receipt_detects_swapped_image(pair):
+    ref, live, _, rng = pair
+    bad, _ = faults.apply_faults(live, ["low_light"], rng, sev=0.8)
+    ag = Agent(ref)
+    res = ag.run(bad)
+    assert res.receipt["modified"]
+    other = res.output.copy(); other[0, 0] = 255 - other[0, 0]
+    assert "repaired image does not match the receipt" in provenance.verify_receipt(res.receipt, ag.log.events, other)

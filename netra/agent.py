@@ -20,6 +20,7 @@ from typing import Callable, Optional
 import numpy as np
 
 from .diagnose import Diagnosis, Thresholds, diagnose, saturation_mask, sharpness_index, _gray
+from . import provenance
 from .fixes import CANDIDATES, TOOLS
 
 IMPROVE_FACTOR = 0.7      # 'applied': target severity reduced to <= 70 %
@@ -41,8 +42,13 @@ class AuditLog:
     def __init__(self, path: Optional[str] = None):
         self.path = Path(path) if path else None
         self.events: list[dict] = []
+        self._head = provenance.GENESIS
         if self.path:
             self.path.parent.mkdir(parents=True, exist_ok=True)
+            if self.path.exists():                      # continue an existing hash chain
+                lines = [l for l in self.path.read_text(encoding="utf-8").splitlines() if l.strip()]
+                if lines:
+                    self._head = json.loads(lines[-1]).get("hash", provenance.GENESIS)
 
     @staticmethod
     def _clean(o):
@@ -58,6 +64,9 @@ class AuditLog:
 
     def write(self, event: str, run_id: str, **data):
         rec = {"ts": round(time.time(), 3), "run_id": run_id, "event": event, **self._clean(data)}
+        rec["prev"] = self._head
+        rec["hash"] = provenance.event_hash(self._head, rec)
+        self._head = rec["hash"]
         self.events.append(rec)
         if self.path:
             with self.path.open("a", encoding="utf-8") as fh:
@@ -296,6 +305,7 @@ class Agent:
                 self.log.write("forecast", run_id, **{k: v for k, v in f.items()})
         res = RunResult(run_id, frame, cur, diag0, final, history, alerts, unresolved, ms, self.planner.name)
         res.forecasts = forecasts
+        res.receipt = provenance.make_receipt(run_id, frame, cur, self.log.events, history)
         return res
 
     @staticmethod

@@ -13,7 +13,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from netra import scenes, metrics, timeline
+from netra import scenes, metrics, timeline, provenance
 from netra.agent import Agent
 from netra.diagnose import diagnose
 from netra.faults import FAULTS, apply_faults
@@ -159,7 +159,8 @@ st.markdown("""
 # ------------------------------------------------------------------ sidebar ----------------
 with st.sidebar:
     st.markdown("### 1 &nbsp; Input")
-    mode = st.radio("Source", ["Demo (simulated faults)", "Upload my own frames"], label_visibility="collapsed")
+    mode = st.radio("Source", ["Demo (simulated faults)", "Upload my own frames", "Live webcam (real camera)"],
+                    label_visibility="collapsed")
     truth = None
     if mode.startswith("Demo"):
         scene = st.selectbox("Scene", scenes.TEST_SCENES + scenes.CALIB_SCENES)
@@ -170,10 +171,17 @@ with st.sidebar:
         frame = apply_faults(live, chosen, np.random.default_rng(int(seed)), sev=sev)[0] if chosen else live
         truth = live
     else:
-        up_ref = st.file_uploader("Reference frame (camera when it was healthy)", type=["png", "jpg", "jpeg"])
-        up_cur = st.file_uploader("Current frame", type=["png", "jpg", "jpeg"])
+        if mode.startswith("Live"):
+            st.caption("Real camera test: 1) shoot a healthy reference, 2) then degrade the camera for real "
+                       "(cover part of the lens with a finger smudge, dim the room, shake the laptop, add distance) "
+                       "and shoot again.")
+            up_ref = st.camera_input("1 · Reference (healthy)", key="cam_ref")
+            up_cur = st.camera_input("2 · Current (after degrading)", key="cam_cur") if up_ref else None
+        else:
+            up_ref = st.file_uploader("Reference frame (camera when it was healthy)", type=["png", "jpg", "jpeg"])
+            up_cur = st.file_uploader("Current frame", type=["png", "jpg", "jpeg"])
         if not (up_ref and up_cur):
-            st.info("Upload both frames, or switch to the demo.")
+            st.info("Provide both frames (upload or webcam), or switch to the demo.")
             st.stop()
         ref = load_upload(up_ref)
         frame = cv2.resize(load_upload(up_cur), (ref.shape[1], ref.shape[0]))
@@ -219,7 +227,7 @@ with tab_repair:
         agent = Agent(ref, policy="auto_low")
         with st.spinner("Agent is working..."):
             res = agent.run(frame, approver=lambda s: allowed.get(s["tool"], False))
-        st.session_state["res"] = (res, [e for e in agent.log.events], truth is not None)
+        st.session_state["res"] = (res, [dict(e) for e in agent.log.events], truth is not None)
 
     if "res" in st.session_state and diag.findings:
         res, events, has_truth = st.session_state["res"]
@@ -253,9 +261,21 @@ with tab_repair:
             st.markdown('<div class="sec">Maintenance alerts</div>', unsafe_allow_html=True)
             for al in res.alerts:
                 st.markdown(f'<div class="alert">🔧 {html.escape(al)}</div>', unsafe_allow_html=True)
-        d1, d2, _ = st.columns([1, 1, 2])
+        chain_ok, _bad = provenance.verify_chain(events)
+        problems = provenance.verify_receipt(res.receipt, events, res.output)
+        st.markdown('<div class="sec">Provenance · tamper-evident record</div>', unsafe_allow_html=True)
+        if chain_ok and not problems:
+            st.markdown(f'<div class="alert ok">🔒 Audit chain verified ({len(events)} hash-linked events). '
+                        f'Repaired frame <code>{res.receipt["repaired_sha256"][:16]}…</code> is bound to this run. '
+                        'Editing or deleting any past entry breaks the chain.</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="alert">⚠ Provenance check failed: ' + html.escape("; ".join(problems)) + "</div>",
+                        unsafe_allow_html=True)
+        d1, d2, d3 = st.columns(3)
         d1.download_button("⬇ Audit log (JSONL)", "\n".join(json.dumps(e) for e in events),
                            file_name=f"netra_{res.run_id}.jsonl")
+        d3.download_button("⬇ Repair receipt (JSON)", json.dumps(res.receipt, indent=2),
+                           file_name=f"netra_receipt_{res.run_id}.json")
         ok, buf = cv2.imencode(".png", res.output)
         d2.download_button("⬇ Repaired frame", buf.tobytes(), file_name="netra_repaired.png", mime="image/png")
 
