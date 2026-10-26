@@ -214,3 +214,35 @@ def test_receipt_detects_swapped_image(pair):
     assert res.receipt["modified"]
     other = res.output.copy(); other[0, 0] = 255 - other[0, 0]
     assert "repaired image does not match the receipt" in provenance.verify_receipt(res.receipt, ag.log.events, other)
+
+
+# ---------------- Fleet + report ---------------------------------------------------------------
+from netra import fleet as fleetmod
+from netra.report_html import build_report
+
+
+def _fake_cam(name, slope, n=40):
+    r = np.random.default_rng(3)
+    recs = [{"camera": name, "t": float(d), "faults": [], "note": "",
+             "metrics": {"drift_px": 0.2 + slope * d + float(r.normal(0, .03))}} for d in range(n)]
+    return {"camera": name, "scene": "x", "process": "test", "records": recs}
+
+
+def test_fleet_ranking_orders_by_urgency():
+    fl = [_fake_cam("flat", 0.0), _fake_cam("slow", 0.06), _fake_cam("past", 0.2)]
+    rows = fleetmod.rank(fl, 35.0)
+    assert [r["camera"] for r in rows][0] == "past" and rows[0]["status"] == "needs attention now"
+    assert rows[-1]["camera"] == "flat" and rows[-1]["status"] == "healthy"
+    assert rows[1]["status"] == "maintenance soon" and rows[1]["eta_days"] > 0
+    assert rows[0]["health"] < rows[-1]["health"]
+
+
+def test_html_report_contains_provenance(pair):
+    ref, live, _, rng = pair
+    bad, _ = faults.apply_faults(live, ["noise"], rng, sev=0.8)
+    ag = Agent(ref)
+    res = ag.run(bad)
+    ok, _b = provenance.verify_chain(ag.log.events)
+    doc = build_report(res, res.receipt, ok, len(ag.log.events), camera="<script>x</script>")
+    assert res.receipt["repaired_sha256"] in doc and "Audit chain verified" in doc
+    assert "<script>x</script>" not in doc          # camera name is escaped

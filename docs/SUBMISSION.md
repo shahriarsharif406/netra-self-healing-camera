@@ -12,7 +12,7 @@ Vision systems rarely fail loudly. A smudged lens, a bumped mount or a dark even
 Given a reference frame from the healthy camera, NETRA diagnoses six faults (blur, low light, overexposure, noise, camera drift, lens dirt), chooses a repair from a fixed tool registry, applies it, re-diagnoses to verify it helped, rolls it back if not, and escalates what it cannot fix. Medium-risk changes (re-alignment, regional edits) need human approval; with no approver they are denied. Every step goes to a JSONL audit log, and maintenance alerts name the likely physical cause.
 
 ## How we built it
-Python and OpenCV 5.0: ORB/RANSAC and ECC alignment, Laplacian and Immerkaer measurements, CLAHE, bilateral and non-local-means filters, `cv2.dft` Wiener deconvolution, inpainting. A rule-based planner by default; an optional LLM planner can only propose actions that are validated against the diagnosis and tool registry. Streamlit UI, CLI, 26 tests.
+Python and OpenCV 5.0: ORB/RANSAC and ECC alignment, Laplacian and Immerkaer measurements, CLAHE, bilateral and non-local-means filters, `cv2.dft` Wiener deconvolution, inpainting. A rule-based planner by default; an optional LLM planner can only propose actions that are validated against the diagnosis and tool registry. Streamlit UI, CLI, 28 tests.
 
 ## Results (fresh held-out scenes, 192 faulty frames)
 Mean SSIM 0.498 -> 0.843, 0 frames made worse, 0/16 false alarms on clean frames; a naive "always enhance" pipeline made 71% of frames worse. About 650 ms per frame on 2 CPU cores, no GPU.
@@ -21,6 +21,8 @@ Mean SSIM 0.498 -> 0.843, 0 frames made worse, 0/16 false alarms on clean frames
 **Task guard:** rolls back repairs that lower the user's downstream score: QR decoding in fixed regions 0.72 -> 0.79, and 0 frames where the task got worse than the input (17 without the guard), at the cost of SSIM 0.870 -> 0.829.
 
 **Provenance:** hash-chained audit log plus a repair receipt that binds original frame, repaired frame and run, so a repaired image cannot pass as original evidence (integrity evidence, not a signature). **Live webcam mode** for a manual real-camera demo.
+
+**Fleet queue:** ranks cameras by urgency from their Health Passports (simulated fleet, real ranking logic). **Shareable HTML report** per repair with provenance hashes.
 
 ## Challenges
 Our evaluation exposed a flaw: after exposure repairs, clipped regions looked like lens smudges (73 false alerts). A first fix made it worse and was discarded; excluding pixels the sensor clipped fixed it (calibration 5/20 -> 0/20 false alarms). We re-ran on fresh scenes and report only those.

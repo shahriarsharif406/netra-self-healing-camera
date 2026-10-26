@@ -13,7 +13,8 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from netra import scenes, metrics, timeline, provenance
+from netra import scenes, metrics, timeline, provenance, fleet as fleetmod
+from netra.report_html import build_report
 from netra.agent import Agent
 from netra.diagnose import diagnose
 from netra.faults import FAULTS, apply_faults
@@ -191,7 +192,8 @@ with st.sidebar:
     ok_geo = st.checkbox("Allow re-aligning the image (changes geometry)", value=False)
     ok_reg = st.checkbox("Allow editing smudged regions", value=False)
 
-tab_repair, tab_pass, tab_proof = st.tabs(["🛠  Diagnose & repair", "📈  Health Passport", "🏆  Measured results"])
+tab_repair, tab_pass, tab_fleet, tab_proof = st.tabs(
+    ["🛠  Diagnose & repair", "📈  Health Passport", "🛰  Fleet", "🏆  Measured results"])
 
 # ================================================================= TAB 1: repair ==========
 with tab_repair:
@@ -271,7 +273,11 @@ with tab_repair:
         else:
             st.markdown('<div class="alert">⚠ Provenance check failed: ' + html.escape("; ".join(problems)) + "</div>",
                         unsafe_allow_html=True)
-        d1, d2, d3 = st.columns(3)
+        d1, d2, d3, d4 = st.columns(4)
+        d4.download_button("⬇ Health report (HTML)",
+                           build_report(res, res.receipt, chain_ok, len(events), getattr(res, "forecasts", []),
+                                        camera="demo camera"),
+                           file_name=f"netra_report_{res.run_id}.html", mime="text/html")
         d1.download_button("⬇ Audit log (JSONL)", "\n".join(json.dumps(e) for e in events),
                            file_name=f"netra_{res.run_id}.jsonl")
         d3.download_button("⬇ Repair receipt (JSON)", json.dumps(res.receipt, indent=2),
@@ -338,7 +344,39 @@ with tab_pass:
         ["fault", "metric", "threshold", "status", "eta_days", "slope_per_day", "p"]]
     st.dataframe(rows, hide_index=True, width="stretch")
 
-# ================================================================= TAB 3: results =========
+# ================================================================= TAB 3: fleet ===========
+with tab_fleet:
+    st.markdown("#### Fleet maintenance queue")
+    st.caption("Six SIMULATED cameras, each with its own slow degradation. NETRA ranks them by urgency using each "
+               "camera's Health Passport: already past a limit first, then fewest days to the forecast limit. "
+               "The ranking logic is real; the cameras and their faults are simulated.")
+    if not fleetmod.CACHE.exists():
+        st.info("Fleet cache not built yet. Run `python -m netra.fleet --build` (about 3 minutes), then reload.")
+    else:
+        fl = fleetmod.load()
+        f_day = st.slider("Today is day", 15, 49, 35, key="f_day")
+        rows_ = fleetmod.rank(fl, float(f_day))
+        n_now = sum(r["status"] == "needs attention now" for r in rows_)
+        n_soon = sum(r["status"] == "maintenance soon" for r in rows_)
+        k = st.columns(3)
+        k[0].markdown(kpi("Cameras", len(rows_), ""), unsafe_allow_html=True)
+        k[1].markdown(kpi("Need attention now", n_now, "", False), unsafe_allow_html=True)
+        k[2].markdown(kpi("Maintenance soon (30 d)", n_soon, "", False), unsafe_allow_html=True)
+        st.markdown('<div class="sec">Maintenance queue · most urgent first</div>', unsafe_allow_html=True)
+        cls = {"needs attention now": "bad", "maintenance soon": "warn", "healthy": "ok"}
+        for i, r in enumerate(rows_, 1):
+            what = "" if r["fault"] is None else r["fault"].replace("_", " ")
+            eta = "" if r["eta_days"] is None else ("limit reached" if r["eta_days"] == 0 else f"limit in ~{r['eta_days']:.0f} d")
+            st.markdown(
+                f'<div class="fault"><div class="n">#{i} {r["camera"]}</div>'
+                f'<div class="bar"><i style="width:{int(r["health"])}%"></i></div>'
+                f'<div class="s">{int(r["health"])}</div>'
+                f'<span class="pill {cls[r["status"]]}">{r["status"]}</span>'
+                + (f'<span class="pill">{what} {eta}</span>' if what else "") + "</div>", unsafe_allow_html=True)
+        st.caption("Bar = health score (100 = every metric at its baseline, 0 = a fault limit reached). "
+                   "Dirt build-up forecasts are the weakest (see README).")
+
+# ================================================================= TAB 4: results =========
 with tab_proof:
     st.markdown("#### Measured on fresh scenes the tuning never saw")
     st.caption("192 faulty and 16 clean frames from 8 fresh collage scenes. Faults are simulated. "
